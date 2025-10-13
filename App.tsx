@@ -1,0 +1,524 @@
+import React, { useState } from 'react';
+import Header from './components/Header';
+import EventCard from './components/EventCard';
+import EventDetails from './components/EventDetails';
+import AddEventModal from './components/AddEventModal';
+import AddTaskModal from './components/AddTaskModal';
+import ConfirmationModal from './components/ConfirmationModal';
+import LoginScreen from './components/LoginScreen';
+import SponsorshipManager from './components/SponsorshipManager';
+import AddSponsorshipModal from './components/AddSponsorshipModal';
+import SponsorshipLetter from './components/SponsorshipLetter';
+import RegistrationModal from './components/RegistrationRoleModal';
+import {
+  Event,
+  Task,
+  TaskStatus,
+  TaskCategory,
+  SponsorshipRequest,
+  Admin,
+  ClubPresident,
+  User,
+} from './types';
+import { PlusIcon } from './components/icons';
+
+const App: React.FC = () => {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [clubPresidents, setClubPresidents] = useState<ClubPresident[]>([]);
+  const [sponsorshipRequests, setSponsorshipRequests] = useState<
+    SponsorshipRequest[]
+  >([]);
+
+  const [currentUser, setCurrentUser] = useState<
+    (User & { role: 'admin' | 'clubPresident' }) | null
+  >(null);
+  const [loginError, setLoginError] = useState('');
+
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedSponsorship, setSelectedSponsorship] =
+    useState<SponsorshipRequest | null>(null);
+  const [currentView, setCurrentView] = useState<'events' | 'sponsorships'>(
+    'events',
+  );
+
+  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [isSponsorshipModalOpen, setIsSponsorshipModalOpen] = useState(false);
+  const [sponsorshipToEdit, setSponsorshipToEdit] =
+    useState<SponsorshipRequest | null>(null);
+
+  const [isConfirmDeleteEventModalOpen, setIsConfirmDeleteEventModalOpen] =
+    useState(false);
+  const [eventToDeleteId, setEventToDeleteId] = useState<string | null>(null);
+
+  const [
+    isConfirmDeleteSponsorshipModalOpen,
+    setIsConfirmDeleteSponsorshipModalOpen,
+  ] = useState(false);
+  const [sponsorshipToDeleteId, setSponsorshipToDeleteId] = useState<
+    string | null
+  >(null);
+  
+  const [isConfirmDeleteAccountModalOpen, setIsConfirmDeleteAccountModalOpen] = useState(false);
+
+
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+  const [roleToRegister, setRoleToRegister] = useState<
+    'admin' | 'clubPresident' | null
+  >(null);
+
+  const handleLogin = (
+    usernameOrEmail: string,
+    password: string,
+    role: 'admin' | 'clubPresident',
+  ) => {
+    setLoginError('');
+    let user: User | undefined;
+    const userList = role === 'admin' ? admins : clubPresidents;
+
+    user = userList.find(
+      (u) =>
+        (u.username === usernameOrEmail || u.email === usernameOrEmail) &&
+        u.password === password,
+    );
+
+    if (user) {
+      setCurrentUser({ ...user, role });
+      setCurrentView('events');
+    } else {
+      setLoginError('اسم المستخدم أو كلمة المرور غير صحيحة.');
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setSelectedEvent(null);
+    setSelectedSponsorship(null);
+    setCurrentView('events');
+  };
+  
+  const handleOpenRegister = (role: 'admin' | 'clubPresident') => {
+    setRoleToRegister(role);
+    setIsRegistrationModalOpen(true);
+  };
+
+  const handleRegister = (
+    data: {
+      username: string;
+      email: string;
+      password: string;
+    },
+    role: 'admin' | 'clubPresident',
+  ) => {
+    const newUser = {
+      id: `${role}-${Date.now()}`,
+      ...data,
+    };
+
+    if (role === 'admin') {
+      setAdmins([...admins, newUser]);
+    } else {
+      setClubPresidents([...clubPresidents, newUser]);
+    }
+
+    setIsRegistrationModalOpen(false);
+    alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
+  };
+  
+  const handleDeleteCurrentUserAccount = () => {
+    if (!currentUser) return;
+
+    if (currentUser.role === 'admin') {
+      setAdmins(prevAdmins => prevAdmins.filter(admin => admin.id !== currentUser.id));
+    } else if (currentUser.role === 'clubPresident') {
+      setClubPresidents(prevPresidents => prevPresidents.filter(p => p.id !== currentUser.id));
+    }
+    
+    // Future consideration: un-assign tasks or sponsorships from the deleted user.
+    
+    setIsConfirmDeleteAccountModalOpen(false);
+    handleLogout();
+  };
+
+
+  const handleSelectEvent = (event: Event) => {
+    setSelectedEvent(event);
+  };
+
+  const handleBackToList = () => {
+    setSelectedEvent(null);
+  };
+
+  const handleAddEvent = (
+    name: string,
+    date: string,
+    approximateBudget: number,
+  ) => {
+    if (!currentUser) return;
+    const newEvent: Event = {
+      id: new Date().toISOString(),
+      name,
+      date,
+      approximateBudget,
+      tasks: [],
+      createdBy: currentUser.id,
+    };
+    setEvents([...events, newEvent]);
+  };
+
+  const handleOpenConfirmDeleteEventModal = (event: Event) => {
+    setEventToDeleteId(event.id);
+    setIsConfirmDeleteEventModalOpen(true);
+  };
+
+  const handleDeleteEvent = () => {
+    if (!eventToDeleteId || !currentUser) return;
+    const eventToDelete = events.find((event) => event.id === eventToDeleteId);
+    if (eventToDelete?.createdBy !== currentUser.id) {
+      alert('ليس لديك الصلاحية لحذف هذه الفعالية.');
+      return;
+    }
+    setEvents(events.filter((event) => event.id !== eventToDeleteId));
+    setIsConfirmDeleteEventModalOpen(false);
+    setEventToDeleteId(null);
+  };
+
+  // Fix: Change 'assignedTo' type from string[] to User[].
+  const handleSaveTask = (
+    name: string,
+    assignedTo: User[],
+    isOptional: boolean,
+    category: TaskCategory,
+    reminderDate?: string,
+    cost?: number,
+  ) => {
+    if (!selectedEvent || currentUser?.id !== selectedEvent.createdBy) return;
+
+    const taskData = {
+      name,
+      assignedTo,
+      isOptional,
+      category,
+      reminderDate,
+      cost,
+    };
+
+    if (taskToEdit) {
+      const updatedTask = { ...taskToEdit, ...taskData };
+      const updatedEvents = events.map((event) =>
+        event.id === selectedEvent.id
+          ? {
+              ...event,
+              tasks: event.tasks.map((t) =>
+                t.id === updatedTask.id ? updatedTask : t,
+              ),
+            }
+          : event,
+      );
+      setEvents(updatedEvents);
+      setSelectedEvent(
+        updatedEvents.find((e) => e.id === selectedEvent.id) || null,
+      );
+    } else {
+      const newTask: Task = {
+        id: new Date().toISOString(),
+        status: TaskStatus.ToDo,
+        ...taskData,
+      };
+      const updatedEvents = events.map((event) =>
+        event.id === selectedEvent.id
+          ? { ...event, tasks: [...event.tasks, newTask] }
+          : event,
+      );
+      setEvents(updatedEvents);
+      setSelectedEvent(
+        updatedEvents.find((e) => e.id === selectedEvent.id) || null,
+      );
+    }
+  };
+
+  const handleUpdateTaskStatus = (updatedTask: Task) => {
+    if (!selectedEvent) return;
+    const updatedEvents = events.map((event) => {
+      if (event.id === selectedEvent.id) {
+        return {
+          ...event,
+          tasks: event.tasks.map((task) =>
+            task.id === updatedTask.id ? updatedTask : task,
+          ),
+        };
+      }
+      return event;
+    });
+    setEvents(updatedEvents);
+    setSelectedEvent(
+      updatedEvents.find((e) => e.id === selectedEvent.id) || null,
+    );
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    if (!selectedEvent || currentUser?.id !== selectedEvent.createdBy) return;
+
+    const updatedEvents = events.map((event) => {
+      if (event.id === selectedEvent.id) {
+        return {
+          ...event,
+          tasks: event.tasks.filter((task) => task.id !== taskId),
+        };
+      }
+      return event;
+    });
+    setEvents(updatedEvents);
+    setSelectedEvent(
+      updatedEvents.find((e) => e.id === selectedEvent.id) || null,
+    );
+  };
+
+  const handleSaveSponsorship = (
+    data: Omit<SponsorshipRequest, 'status' | 'creatorId' | 'creatorType'> & {
+      id?: string;
+    },
+  ) => {
+    if (!currentUser) return;
+
+    if (data.id) {
+      const updatedData = { ...data };
+      delete updatedData.id;
+
+      setSponsorshipRequests(
+        sponsorshipRequests.map((req) =>
+          req.id === data.id ? { ...req, ...updatedData } : req,
+        ),
+      );
+    } else {
+      const newRequest: SponsorshipRequest = {
+        id: `sp-${new Date().toISOString()}`,
+        ...data,
+        status: 'Draft',
+        creatorId: currentUser.id,
+        creatorType: currentUser.role,
+      };
+      setSponsorshipRequests([...sponsorshipRequests, newRequest]);
+    }
+  };
+
+  const handleDeleteSponsorship = () => {
+    if (!sponsorshipToDeleteId || !currentUser) return;
+    const requestToDelete = sponsorshipRequests.find(
+      (req) => req.id === sponsorshipToDeleteId,
+    );
+    if (requestToDelete?.creatorId !== currentUser.id) {
+      alert('ليس لديك الصلاحية لحذف طلب الرعاية هذا.');
+      return;
+    }
+    setSponsorshipRequests(
+      sponsorshipRequests.filter((req) => req.id !== sponsorshipToDeleteId),
+    );
+    setIsConfirmDeleteSponsorshipModalOpen(false);
+    setSponsorshipToDeleteId(null);
+  };
+
+  const renderContent = () => {
+    if (currentView === 'sponsorships') {
+      if (selectedSponsorship) {
+        const canPrintAndEdit =
+          currentUser?.role === 'admin' &&
+          currentUser?.id === selectedSponsorship.assignedToEmployeeId;
+
+        return (
+          <SponsorshipLetter
+            request={selectedSponsorship}
+            onBack={() => setSelectedSponsorship(null)}
+            assignedEmployeeName={
+              admins.find((a) => a.id === selectedSponsorship.assignedToEmployeeId)
+                ?.username || 'غير محدد'
+            }
+            canPrintAndEdit={canPrintAndEdit}
+          />
+        );
+      }
+      return (
+        <SponsorshipManager
+          requests={sponsorshipRequests.filter(
+            (r) =>
+              r.creatorId === currentUser?.id ||
+              (currentUser?.role === 'admin' &&
+                r.assignedToEmployeeId === currentUser.id),
+          )}
+          // Fix: Pass admins to allEmployees prop.
+          allEmployees={admins}
+          onAdd={() => setIsSponsorshipModalOpen(true)}
+          onSelect={setSelectedSponsorship}
+          onDelete={(id) => {
+            setSponsorshipToDeleteId(id);
+            setIsConfirmDeleteSponsorshipModalOpen(true);
+          }}
+          onEdit={(req) => {
+            setSponsorshipToEdit(req);
+            setIsSponsorshipModalOpen(true);
+          }}
+          currentUser={currentUser}
+          currentUserRole={currentUser?.role || null}
+        />
+      );
+    }
+
+    if (selectedEvent) {
+      return (
+        <EventDetails
+          event={selectedEvent}
+          onBack={handleBackToList}
+          onUpdateTask={handleUpdateTaskStatus}
+          onDeleteTask={handleDeleteTask}
+          onOpenAddTaskModal={() => setIsTaskModalOpen(true)}
+          onOpenEditTaskModal={(task) => {
+            setTaskToEdit(task);
+            setIsTaskModalOpen(true);
+          }}
+          currentUser={currentUser}
+        />
+      );
+    }
+
+    // Default view: events
+    return (
+      <div>
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-gray-800">
+            الفعاليات القادمة
+          </h2>
+          <button
+            onClick={() => setIsAddEventModalOpen(true)}
+            className="flex items-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700"
+          >
+            <PlusIcon className="me-2 h-5 w-5" />
+            فعالية جديدة
+          </button>
+        </div>
+        {events.length > 0 ? (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {events
+              .sort(
+                (a, b) =>
+                  new Date(a.date).getTime() - new Date(b.date).getTime(),
+              )
+              .map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onSelect={handleSelectEvent}
+                  onDelete={handleOpenConfirmDeleteEventModal}
+                  currentUser={currentUser}
+                />
+              ))}
+          </div>
+        ) : (
+          <div className="rounded-lg bg-white px-6 py-16 text-center shadow-md">
+            <h3 className="text-xl font-medium text-gray-700">
+              لا توجد فعاليات مجدولة
+            </h3>
+            <p className="mt-2 text-gray-500">
+              ابدأ بتنظيم فعاليتك الأولى الآن!
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (!currentUser) {
+    return (
+      <>
+        <LoginScreen
+          onLogin={handleLogin}
+          onSwitchToRegister={handleOpenRegister}
+          error={loginError}
+        />
+        <RegistrationModal
+          isOpen={isRegistrationModalOpen}
+          onClose={() => setIsRegistrationModalOpen(false)}
+          onRegister={handleRegister}
+          roleToRegister={roleToRegister}
+        />
+      </>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header
+        currentView={currentView}
+        setCurrentView={(view) => {
+          setSelectedSponsorship(null);
+          setSelectedEvent(null);
+          setCurrentView(view);
+        }}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenDeleteAccountModal={() => setIsConfirmDeleteAccountModalOpen(true)}
+      />
+      <main className="mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
+        {renderContent()}
+      </main>
+
+      <AddEventModal
+        isOpen={isAddEventModalOpen}
+        onClose={() => setIsAddEventModalOpen(false)}
+        onAddEvent={handleAddEvent}
+      />
+
+      {selectedEvent && (
+        <AddTaskModal
+          isOpen={isTaskModalOpen}
+          onClose={() => setIsTaskModalOpen(false)}
+          onSave={handleSaveTask}
+          taskToEdit={taskToEdit}
+          // Fix: Pass admins to allEmployees prop.
+          allEmployees={admins}
+        />
+      )}
+
+      <AddSponsorshipModal
+        isOpen={isSponsorshipModalOpen}
+        onClose={() => {
+          setIsSponsorshipModalOpen(false);
+          setSponsorshipToEdit(null);
+        }}
+        onSave={handleSaveSponsorship}
+        sponsorshipToEdit={sponsorshipToEdit}
+        allEmployees={admins} // Assign to admins
+        currentUserRole={currentUser?.role || null}
+        currentUserId={currentUser.id}
+      />
+
+      <ConfirmationModal
+        isOpen={isConfirmDeleteEventModalOpen}
+        onClose={() => setIsConfirmDeleteEventModalOpen(false)}
+        onConfirm={handleDeleteEvent}
+        title="تأكيد حذف الفعالية"
+        message="هل أنت متأكد من رغبتك في حذف هذه الفعالية؟ لا يمكن التراجع عن هذا الإجراء."
+      />
+
+      <ConfirmationModal
+        isOpen={isConfirmDeleteSponsorshipModalOpen}
+        onClose={() => setIsConfirmDeleteSponsorshipModalOpen(false)}
+        onConfirm={handleDeleteSponsorship}
+        title="تأكيد حذف طلب الرعاية"
+        message="هل أنت متأكد من رغبتك في حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء."
+      />
+
+       <ConfirmationModal
+        isOpen={isConfirmDeleteAccountModalOpen}
+        onClose={() => setIsConfirmDeleteAccountModalOpen(false)}
+        onConfirm={handleDeleteCurrentUserAccount}
+        title="تأكيد حذف الحساب"
+        message="هل أنت متأكد من رغبتك في حذف حسابك بشكل دائم؟ لا يمكن التراجع عن هذا الإجراء."
+        confirmText="نعم، احذف حسابي"
+      />
+    </div>
+  );
+};
+
+export default App;
