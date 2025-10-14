@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import EventCard from './components/EventCard';
 import EventDetails from './components/EventDetails';
@@ -10,6 +10,8 @@ import SponsorshipManager from './components/SponsorshipManager';
 import AddSponsorshipModal from './components/AddSponsorshipModal';
 import SponsorshipLetter from './components/SponsorshipLetter';
 import RegistrationModal from './components/RegistrationRoleModal';
+import EmployeeManager from './components/EmployeeManager';
+import EmployeeModal from './components/EmployeeModal';
 import {
   Event,
   Task,
@@ -22,25 +24,69 @@ import {
 } from './types';
 import { PlusIcon } from './components/icons';
 
+// Helper function to get initial state from localStorage
+const getInitialState = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const storedValue = localStorage.getItem(key);
+    if (storedValue) {
+      return JSON.parse(storedValue);
+    }
+  } catch (error) {
+    console.error(`Error reading localStorage key “${key}”:`, error);
+  }
+  return defaultValue;
+};
+
 const App: React.FC = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [admins, setAdmins] = useState<Admin[]>([]);
-  const [clubPresidents, setClubPresidents] = useState<ClubPresident[]>([]);
+  const [events, setEvents] = useState<Event[]>(() =>
+    getInitialState('events', []),
+  );
+  const [admins, setAdmins] = useState<Admin[]>(() =>
+    getInitialState('admins', []),
+  );
+  const [clubPresidents, setClubPresidents] = useState<ClubPresident[]>(() =>
+    getInitialState('clubPresidents', []),
+  );
   const [sponsorshipRequests, setSponsorshipRequests] = useState<
     SponsorshipRequest[]
-  >([]);
+  >(() => getInitialState('sponsorshipRequests', []));
 
   const [currentUser, setCurrentUser] = useState<
     (User & { role: 'admin' | 'clubPresident' }) | null
-  >(null);
+  >(() => getInitialState('currentUser', null));
+
+  // Use useEffect to persist state changes to localStorage
+  useEffect(() => {
+    localStorage.setItem('events', JSON.stringify(events));
+  }, [events]);
+
+  useEffect(() => {
+    localStorage.setItem('admins', JSON.stringify(admins));
+  }, [admins]);
+
+  useEffect(() => {
+    localStorage.setItem('clubPresidents', JSON.stringify(clubPresidents));
+  }, [clubPresidents]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      'sponsorshipRequests',
+      JSON.stringify(sponsorshipRequests),
+    );
+  }, [sponsorshipRequests]);
+
+  useEffect(() => {
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+  }, [currentUser]);
+
   const [loginError, setLoginError] = useState('');
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedSponsorship, setSelectedSponsorship] =
     useState<SponsorshipRequest | null>(null);
-  const [currentView, setCurrentView] = useState<'events' | 'sponsorships'>(
-    'events',
-  );
+  const [currentView, setCurrentView] = useState<
+    'events' | 'sponsorships' | 'employees'
+  >('events');
 
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -48,6 +94,14 @@ const App: React.FC = () => {
   const [isSponsorshipModalOpen, setIsSponsorshipModalOpen] = useState(false);
   const [sponsorshipToEdit, setSponsorshipToEdit] =
     useState<SponsorshipRequest | null>(null);
+
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [employeeToEdit, setEmployeeToEdit] = useState<User | null>(null);
+  const [
+    isConfirmDeleteEmployeeModalOpen,
+    setIsConfirmDeleteEmployeeModalOpen,
+  ] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
 
   const [isConfirmDeleteEventModalOpen, setIsConfirmDeleteEventModalOpen] =
     useState(false);
@@ -60,9 +114,9 @@ const App: React.FC = () => {
   const [sponsorshipToDeleteId, setSponsorshipToDeleteId] = useState<
     string | null
   >(null);
-  
-  const [isConfirmDeleteAccountModalOpen, setIsConfirmDeleteAccountModalOpen] = useState(false);
 
+  const [isConfirmDeleteAccountModalOpen, setIsConfirmDeleteAccountModalOpen] =
+    useState(false);
 
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [roleToRegister, setRoleToRegister] = useState<
@@ -98,7 +152,7 @@ const App: React.FC = () => {
     setSelectedSponsorship(null);
     setCurrentView('events');
   };
-  
+
   const handleOpenRegister = (role: 'admin' | 'clubPresident') => {
     setRoleToRegister(role);
     setIsRegistrationModalOpen(true);
@@ -126,22 +180,67 @@ const App: React.FC = () => {
     setIsRegistrationModalOpen(false);
     alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
   };
-  
+
   const handleDeleteCurrentUserAccount = () => {
     if (!currentUser) return;
 
     if (currentUser.role === 'admin') {
-      setAdmins(prevAdmins => prevAdmins.filter(admin => admin.id !== currentUser.id));
+      setAdmins((prevAdmins) =>
+        prevAdmins.filter((admin) => admin.id !== currentUser.id),
+      );
     } else if (currentUser.role === 'clubPresident') {
-      setClubPresidents(prevPresidents => prevPresidents.filter(p => p.id !== currentUser.id));
+      setClubPresidents((prevPresidents) =>
+        prevPresidents.filter((p) => p.id !== currentUser.id),
+      );
     }
-    
+
     // Future consideration: un-assign tasks or sponsorships from the deleted user.
-    
+
     setIsConfirmDeleteAccountModalOpen(false);
     handleLogout();
   };
 
+  const handleSaveEmployee = (
+    employeeData: Omit<User, 'id'> & { id?: string },
+  ) => {
+    if (employeeData.id) {
+      // Edit mode
+      setAdmins(
+        admins.map((admin) =>
+          admin.id === employeeData.id ? { ...admin, ...employeeData } : admin,
+        ),
+      );
+    } else {
+      // Add mode
+      const newAdmin: Admin = {
+        id: `admin-${Date.now()}`,
+        username: employeeData.username,
+        email: employeeData.email,
+        password: employeeData.password,
+        phone: employeeData.phone,
+      };
+      setAdmins([...admins, newAdmin]);
+    }
+    setIsEmployeeModalOpen(false);
+    setEmployeeToEdit(null);
+  };
+
+  const handleOpenDeleteEmployeeModal = (employee: User) => {
+    if (currentUser?.id === employee.id) {
+      alert('لا يمكنك حذف حسابك الخاص من هنا.');
+      return;
+    }
+    setEmployeeToDelete(employee);
+    setIsConfirmDeleteEmployeeModalOpen(true);
+  };
+
+  const handleDeleteEmployee = () => {
+    if (!employeeToDelete) return;
+    setAdmins(admins.filter((admin) => admin.id !== employeeToDelete.id));
+    // Future consideration: Also remove from tasks?
+    setIsConfirmDeleteEmployeeModalOpen(false);
+    setEmployeeToDelete(null);
+  };
 
   const handleSelectEvent = (event: Event) => {
     setSelectedEvent(event);
@@ -321,6 +420,30 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    if (currentView === 'employees') {
+      if (currentUser?.role !== 'admin') {
+        return (
+          <div className="text-center text-red-600">
+            <p>ليس لديك صلاحية الوصول لهذه الصفحة.</p>
+          </div>
+        );
+      }
+      return (
+        <EmployeeManager
+          employees={admins}
+          onAdd={() => {
+            setEmployeeToEdit(null);
+            setIsEmployeeModalOpen(true);
+          }}
+          onEdit={(employee) => {
+            setEmployeeToEdit(employee);
+            setIsEmployeeModalOpen(true);
+          }}
+          onDelete={handleOpenDeleteEmployeeModal}
+        />
+      );
+    }
+
     if (currentView === 'sponsorships') {
       if (selectedSponsorship) {
         const canPrintAndEdit =
@@ -332,8 +455,9 @@ const App: React.FC = () => {
             request={selectedSponsorship}
             onBack={() => setSelectedSponsorship(null)}
             assignedEmployeeName={
-              admins.find((a) => a.id === selectedSponsorship.assignedToEmployeeId)
-                ?.username || 'غير محدد'
+              admins.find(
+                (a) => a.id === selectedSponsorship.assignedToEmployeeId,
+              )?.username || 'غير محدد'
             }
             canPrintAndEdit={canPrintAndEdit}
           />
@@ -457,7 +581,9 @@ const App: React.FC = () => {
         }}
         currentUser={currentUser}
         onLogout={handleLogout}
-        onOpenDeleteAccountModal={() => setIsConfirmDeleteAccountModalOpen(true)}
+        onOpenDeleteAccountModal={() =>
+          setIsConfirmDeleteAccountModalOpen(true)
+        }
       />
       <main className="mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
         {renderContent()}
@@ -472,13 +598,27 @@ const App: React.FC = () => {
       {selectedEvent && (
         <AddTaskModal
           isOpen={isTaskModalOpen}
-          onClose={() => setIsTaskModalOpen(false)}
+          onClose={() => {
+            setIsTaskModalOpen(false);
+            setTaskToEdit(null);
+          }}
           onSave={handleSaveTask}
           taskToEdit={taskToEdit}
           // Fix: Pass admins to allEmployees prop.
           allEmployees={admins}
         />
       )}
+
+      <EmployeeModal
+        isOpen={isEmployeeModalOpen}
+        onClose={() => {
+          setIsEmployeeModalOpen(false);
+          setEmployeeToEdit(null);
+        }}
+        onSave={handleSaveEmployee}
+        employeeToEdit={employeeToEdit}
+        currentUser={currentUser}
+      />
 
       <AddSponsorshipModal
         isOpen={isSponsorshipModalOpen}
@@ -509,13 +649,21 @@ const App: React.FC = () => {
         message="هل أنت متأكد من رغبتك في حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء."
       />
 
-       <ConfirmationModal
+      <ConfirmationModal
         isOpen={isConfirmDeleteAccountModalOpen}
         onClose={() => setIsConfirmDeleteAccountModalOpen(false)}
         onConfirm={handleDeleteCurrentUserAccount}
         title="تأكيد حذف الحساب"
         message="هل أنت متأكد من رغبتك في حذف حسابك بشكل دائم؟ لا يمكن التراجع عن هذا الإجراء."
         confirmText="نعم، احذف حسابي"
+      />
+
+      <ConfirmationModal
+        isOpen={isConfirmDeleteEmployeeModalOpen}
+        onClose={() => setIsConfirmDeleteEmployeeModalOpen(false)}
+        onConfirm={handleDeleteEmployee}
+        title="تأكيد حذف الموظف"
+        message={`هل أنت متأكد من رغبتك في حذف حساب الموظف "${employeeToDelete?.username}"؟ سيتم إزالته من أي مهام مسندة إليه.`}
       />
     </div>
   );
