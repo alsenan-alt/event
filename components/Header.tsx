@@ -3,8 +3,8 @@ import { User } from '../types';
 import { CogIcon } from './icons';
 
 interface HeaderProps {
-  currentView: 'events' | 'sponsorships';
-  setCurrentView: (view: 'events' | 'sponsorships') => void;
+  currentView: 'events' | 'sponsorships' | 'employees';
+  setCurrentView: (view: 'events' | 'sponsorships' | 'employees') => void;
   currentUser: (User & { role: 'admin' | 'clubPresident' }) | null;
   onLogout: () => void;
   onOpenDeleteAccountModal: () => void;
@@ -47,12 +47,24 @@ const Header: React.FC<HeaderProps> = ({
               >
                 الرعاية
               </button>
+              {currentUser.role === 'admin' && (
+                <button
+                  onClick={() => setCurrentView('employees')}
+                  className={`rounded-md px-4 py-2 text-sm font-semibold duration-300 transition-colors ${
+                    currentView === 'employees'
+                      ? activeClasses
+                      : inactiveClasses
+                  }`}
+                >
+                  الموظفين
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <span className="hidden text-sm text-gray-600 sm:inline">
                 مرحباً, <span className="font-bold">{currentUser.username}</span>
               </span>
-               <button
+              <button
                 onClick={onOpenDeleteAccountModal}
                 className="rounded-md px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100"
               >
