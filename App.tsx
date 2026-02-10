@@ -13,6 +13,7 @@ import SponsorshipLetter from './components/SponsorshipLetter';
 import RegistrationModal from './components/RegistrationRoleModal';
 import EmployeeManager from './components/EmployeeManager';
 import EmployeeModal from './components/EmployeeModal';
+import ForgotPasswordModal from './components/ForgotPasswordModal';
 import {
   Event,
   Task,
@@ -126,6 +127,8 @@ const App: React.FC = () => {
     'admin' | 'clubPresident' | null
   >(null);
 
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+
   const handleLogin = (
     usernameOrEmail: string,
     password: string,
@@ -182,6 +185,33 @@ const App: React.FC = () => {
 
     setIsRegistrationModalOpen(false);
     alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.');
+  };
+
+  const handleRecoverPassword = (email: string) => {
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // Find in admins
+    let foundUser = admins.find(a => a.email.toLowerCase() === normalizedEmail);
+    if (!foundUser) {
+      // Find in club presidents
+      foundUser = clubPresidents.find(p => p.email.toLowerCase() === normalizedEmail);
+    }
+
+    if (foundUser) {
+      // Simulate sending email via mailto
+      const subject = encodeURIComponent('استعادة كلمة المرور - وحدة دعم المبادرات والأنشطة');
+      const body = encodeURIComponent(`مرحباً ${foundUser.username}،\n\nلقد تلقينا طلباً لاستعادة كلمة المرور الخاصة بك.\n\nكلمة المرور الحالية هي: ${foundUser.password}\n\nيرجى الحفاظ على سرية هذه البيانات.`);
+      
+      const mailtoLink = `mailto:${foundUser.email}?subject=${subject}&body=${body}`;
+      
+      setIsForgotPasswordModalOpen(false);
+      window.location.href = mailtoLink;
+      
+      // Also show an alert for immediate feedback
+      alert(`تم العثور على حسابك! سيتم فتح تطبيق البريد الخاص بك لإرسال كلمة المرور إلى: ${foundUser.email}`);
+    } else {
+      alert('عذراً، هذا البريد الإلكتروني غير مسجل في النظام لدينا.');
+    }
   };
 
   const handleDeleteCurrentUserAccount = () => {
@@ -632,6 +662,7 @@ const App: React.FC = () => {
         <LoginScreen
           onLogin={handleLogin}
           onSwitchToRegister={handleOpenRegister}
+          onForgotPassword={() => setIsForgotPasswordModalOpen(true)}
           error={loginError}
         />
         <RegistrationModal
@@ -639,6 +670,11 @@ const App: React.FC = () => {
           onClose={() => setIsRegistrationModalOpen(false)}
           onRegister={handleRegister}
           roleToRegister={roleToRegister}
+        />
+        <ForgotPasswordModal
+          isOpen={isForgotPasswordModalOpen}
+          onClose={() => setIsForgotPasswordModalOpen(false)}
+          onRecover={handleRecoverPassword}
         />
       </>
     );

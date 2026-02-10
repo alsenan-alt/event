@@ -14,6 +14,7 @@ interface LoginProps {
     role: 'admin' | 'clubPresident',
   ) => void;
   onSwitchToRegister: (role: 'admin' | 'clubPresident') => void;
+  onForgotPassword: () => void;
   error: string;
 }
 
@@ -22,7 +23,8 @@ const LoginForm: React.FC<{
   title: string;
   onLogin: (usernameOrEmail: string, password: string) => void;
   onSwitchToRegister: () => void;
-}> = ({ role, title, onLogin, onSwitchToRegister }) => {
+  onForgotPassword: () => void;
+}> = ({ role, title, onLogin, onSwitchToRegister, onForgotPassword }) => {
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -72,12 +74,21 @@ const LoginForm: React.FC<{
           </div>
         </div>
         <div>
-          <label
-            htmlFor={`${role}-password`}
-            className="mb-2 block text-sm font-semibold text-gray-600 px-1"
-          >
-            كلمة المرور
-          </label>
+          <div className="flex items-center justify-between px-1 mb-2">
+            <label
+              htmlFor={`${role}-password`}
+              className="block text-sm font-semibold text-gray-600"
+            >
+              كلمة المرور
+            </label>
+            <button
+              type="button"
+              onClick={onForgotPassword}
+              className={`text-xs font-bold hover:underline ${linkClass}`}
+            >
+              نسيت كلمة المرور؟
+            </button>
+          </div>
           <div className="relative group">
             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 transition-colors group-focus-within:text-blue-500">
               <KeyIcon className="h-5 w-5 text-gray-400" />
@@ -119,6 +130,7 @@ const LoginForm: React.FC<{
 const LoginScreen: React.FC<LoginProps> = ({
   onLogin,
   onSwitchToRegister,
+  onForgotPassword,
   error,
 }) => {
   return (
@@ -141,12 +153,14 @@ const LoginScreen: React.FC<LoginProps> = ({
           title="تسجيل دخول رئيس النادي"
           onLogin={(u, p) => onLogin(u, p, 'clubPresident')}
           onSwitchToRegister={() => onSwitchToRegister('clubPresident')}
+          onForgotPassword={onForgotPassword}
         />
         <LoginForm
           role="admin"
           title="تسجيل دخول المشرف"
           onLogin={(u, p) => onLogin(u, p, 'admin')}
           onSwitchToRegister={() => onSwitchToRegister('admin')}
+          onForgotPassword={onForgotPassword}
         />
       </div>
 
