@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User } from '../types';
 import { CogIcon } from './icons';
@@ -24,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({
     <header className="bg-white shadow-md">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 py-4 px-4 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-          منظم أجندة الفعاليات
+          وحدة دعم المبادرات والأنشطة
         </h1>
         {currentUser && (
           <div className="flex items-center gap-4">
