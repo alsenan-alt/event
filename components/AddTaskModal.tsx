@@ -1,5 +1,5 @@
+
 import React, { useState, useEffect } from 'react';
-// Fix: Replace non-existent 'Employee' type with 'User'.
 import { User, Task, TaskCategory } from '../types';
 import { PlusIcon, XCircleIcon } from './icons';
 
@@ -8,7 +8,6 @@ interface AddTaskModalProps {
   onClose: () => void;
   onSave: (
     name: string,
-    // Fix: Change 'Employee[]' to 'User[]'.
     assignedTo: User[],
     isOptional: boolean,
     category: TaskCategory,
@@ -16,7 +15,6 @@ interface AddTaskModalProps {
     cost?: number,
   ) => void;
   taskToEdit?: Task | null;
-  // Fix: Change 'Employee[]' to 'User[]'.
   allEmployees: User[];
 }
 
@@ -42,7 +40,6 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
   const [reminderDate, setReminderDate] = useState('');
   const [cost, setCost] = useState('');
 
-  // Fix: Change 'Employee[]' to 'User[]'.
   const [assignedEmployees, setAssignedEmployees] = useState<User[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
@@ -126,47 +123,48 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg transform rounded-lg bg-white p-8 shadow-2xl transition-all"
+        className="w-full max-w-xl transform rounded-3xl bg-white p-10 shadow-2xl transition-all animate-scale-up"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-6 text-2xl font-bold text-gray-800">
-          {isEditMode ? 'تعديل المهمة' : 'إضافة مهمة جديدة'}
-        </h2>
-        <form onSubmit={handleSubmit}>
-          {/* Task Details */}
-          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label
-                htmlFor="taskName"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                وصف المهمة
-              </label>
-              <input
-                type="text"
-                id="taskName"
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                required
-              />
-            </div>
+        <div className="flex justify-between items-center mb-8">
+           <h2 className="text-3xl font-black text-gray-800 tracking-tight">
+            {isEditMode ? 'تعديل المتطلب' : 'إضافة متطلب إداري'}
+          </h2>
+          <button onClick={onClose} className="text-gray-300 hover:text-red-500 transition-colors">
+             <XCircleIcon className="h-8 w-8" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="taskName" className="mb-2 block text-sm font-bold text-gray-600 px-1">
+              وصف المتطلب الإداري
+            </label>
+            <input
+              type="text"
+              id="taskName"
+              value={taskName}
+              onChange={(e) => setTaskName(e.target.value)}
+              className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 py-4 px-5 text-gray-800 shadow-sm transition-all focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-bold"
+              placeholder="مثال: حجز القاعة الكبرى، تأمين الضيافة..."
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
-              <label
-                htmlFor="taskCategory"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                فئة المهمة
+              <label htmlFor="taskCategory" className="mb-2 block text-sm font-bold text-gray-600 px-1">
+                الفئة
               </label>
               <select
                 id="taskCategory"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as TaskCategory)}
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 py-4 px-5 text-gray-800 shadow-sm focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-bold appearance-none cursor-pointer"
               >
                 {Object.entries(categoryLabels).map(([key, label]) => (
                   <option key={key} value={key}>
@@ -175,23 +173,33 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                 ))}
               </select>
             </div>
+            <div>
+              <label htmlFor="taskCost" className="mb-2 block text-sm font-bold text-gray-600 px-1">
+                التكلفة المتوقعة
+              </label>
+              <input
+                type="number"
+                id="taskCost"
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 py-4 px-5 text-gray-800 shadow-sm focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-bold"
+                placeholder="0.00"
+                min="0"
+              />
+            </div>
           </div>
 
-          {/* Employee Management */}
-          <div className="border-t border-b border-gray-200 py-4 my-4">
-            <h3 className="mb-3 text-lg font-medium text-gray-800">
-              إسناد المهمة إلى
-            </h3>
-            <div className="mb-4 flex items-center gap-2">
+          <div className="rounded-3xl border border-gray-100 bg-gray-50/30 p-6 space-y-4">
+            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">المسؤولون عن التنفيذ</h3>
+            <div className="flex items-center gap-3">
               <select
                 value={selectedEmployeeId}
                 onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="flex-grow rounded-2xl border border-gray-200 bg-white py-3 px-5 text-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 font-bold text-sm"
               >
-                <option value="">-- اختر موظف --</option>
+                <option value="">-- اختر من فريق العمل --</option>
                 {availableEmployees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {/* Fix: Use 'username' instead of 'name'. */}
                     {emp.username}
                   </option>
                 ))}
@@ -200,7 +208,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
                 type="button"
                 onClick={handleAddEmployee}
                 disabled={!selectedEmployeeId}
-                className="flex shrink-0 items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                className="shrink-0 flex items-center justify-center rounded-2xl bg-slate-800 px-6 py-3.5 text-sm font-black text-white transition-all hover:bg-slate-900 active:scale-95 disabled:opacity-30"
               >
                 <PlusIcon className="me-2 h-4 w-4" />
                 إضافة
@@ -208,28 +216,19 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             </div>
 
             {assignedEmployees.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <p className="text-sm font-medium text-gray-600">
-                  القائمون على المهمة:
-                </p>
+              <div className="flex flex-wrap gap-2 pt-2">
                 {assignedEmployees.map((emp) => (
                   <div
                     key={emp.id}
-                    className="flex items-center justify-between rounded-md bg-gray-50 p-2"
+                    className="flex items-center gap-2 rounded-full bg-white border border-gray-100 px-4 py-2 shadow-sm animate-fade-in"
                   >
-                    <p className="text-sm text-gray-700">
-                      {/* Fix: Use 'username' instead of 'name'. */}
-                      <span className="font-semibold">{emp.username}</span>
-                      {emp.phone && (
-                        <span className="ms-2 text-gray-500"> - {emp.phone}</span>
-                      )}
-                    </p>
+                    <span className="text-sm font-bold text-gray-700">{emp.username}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveEmployee(emp.id)}
-                      className="text-red-400 hover:text-red-600"
+                      className="text-gray-300 hover:text-red-500 transition-colors"
                     >
-                      <XCircleIcon className="h-5 w-5" />
+                      <XCircleIcon className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
@@ -237,65 +236,49 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
             )}
           </div>
 
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
-              <label
-                htmlFor="reminderDate"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                تاريخ التذكير (اختياري)
+              <label htmlFor="reminderDate" className="mb-2 block text-sm font-bold text-gray-600 px-1">
+                تاريخ المتابعة / التذكير
               </label>
               <input
                 type="date"
                 id="reminderDate"
                 value={reminderDate}
                 onChange={(e) => setReminderDate(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                className="w-full rounded-2xl border border-gray-200 bg-gray-50/50 py-4 px-5 text-gray-800 shadow-sm focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-bold"
               />
             </div>
-            <div>
-              <label
-                htmlFor="taskCost"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                تكلفة المهمة (اختياري)
-              </label>
-              <input
-                type="number"
-                id="taskCost"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="2500"
-                min="0"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mt-2 flex items-center">
-                <input
-                  type="checkbox"
-                  checked={isOptional}
-                  onChange={(e) => setIsOptional(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ms-2 text-sm text-gray-600">مهمة اختيارية</span>
+            <div className="flex items-center pt-8">
+              <label className="flex items-center cursor-pointer group">
+                <div className="relative">
+                   <input
+                    type="checkbox"
+                    checked={isOptional}
+                    onChange={(e) => setIsOptional(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`w-12 h-6 rounded-full transition-colors ${isOptional ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                  <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isOptional ? 'translate-x-6' : ''}`}></div>
+                </div>
+                <span className="ms-4 text-sm font-bold text-gray-500 group-hover:text-gray-700">متطلب اختياري</span>
               </label>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-4 space-x-reverse">
+          <div className="flex justify-end gap-4 pt-6">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md bg-gray-200 px-4 py-2 text-gray-800 transition-colors hover:bg-gray-300"
+              className="rounded-2xl px-8 py-4 text-sm font-black text-gray-400 hover:bg-gray-50 transition-colors"
             >
               إلغاء
             </button>
             <button
               type="submit"
-              className="rounded-md bg-blue-600 px-4 py-2 text-white shadow transition-colors hover:bg-blue-700"
+              className="rounded-2xl bg-blue-600 px-10 py-4 text-sm font-black text-white shadow-xl shadow-blue-100 transition-all hover:bg-blue-700 active:scale-95"
             >
-              {isEditMode ? 'حفظ التغييرات' : 'إضافة مهمة'}
+              {isEditMode ? 'حفظ التعديلات' : 'إضافة المتطلب'}
             </button>
           </div>
         </form>
