@@ -1,5 +1,5 @@
-import React from 'react';
-// Fix: Replace Employee with User
+
+import React, { useRef } from 'react';
 import { User } from '../types';
 import {
   UserPlusIcon,
@@ -8,14 +8,16 @@ import {
   TrashIcon,
   PhoneIcon,
   EnvelopeIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
 } from './icons';
 
 interface EmployeeManagerProps {
-  // Fix: Replace Employee with User
   employees: User[];
   onAdd: () => void;
   onEdit: (employee: User) => void;
   onDelete: (employee: User) => void;
+  onImport: (importedEmployees: User[]) => void;
 }
 
 const EmployeeManager: React.FC<EmployeeManagerProps> = ({
@@ -23,18 +25,88 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   onAdd,
   onEdit,
   onDelete,
+  onImport,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    if (employees.length === 0) {
+      alert('لا توجد بيانات موظفين لتصديرها.');
+      return;
+    }
+    const dataStr = JSON.stringify(employees, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `employees_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        if (Array.isArray(imported)) {
+          onImport(imported);
+        } else {
+          alert('ملف غير صالح. يجب أن يحتوي الملف على قائمة موظفين.');
+        }
+      } catch (err) {
+        alert('خطأ في قراءة الملف. تأكد من أنه ملف JSON صحيح.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-2xl font-semibold text-gray-800">إدارة الموظفين</h2>
-        <button
-          onClick={onAdd}
-          className="flex items-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700"
-        >
-          <UserPlusIcon className="me-2 h-5 w-5" />
-          إضافة موظف
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".json"
+            onChange={handleFileChange}
+          />
+          <button
+            onClick={handleExport}
+            className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+            title="تصدير قائمة الموظفين"
+          >
+            <ArrowDownTrayIcon className="me-2 h-4 w-4" />
+            تصدير
+          </button>
+          <button
+            onClick={handleImportClick}
+            className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+            title="استيراد قائمة موظفين"
+          >
+            <ArrowUpTrayIcon className="me-2 h-4 w-4" />
+            استيراد
+          </button>
+          <button
+            onClick={onAdd}
+            className="flex items-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700"
+          >
+            <UserPlusIcon className="me-2 h-5 w-5" />
+            إضافة موظف
+          </button>
+        </div>
       </div>
 
       {employees.length > 0 ? (
@@ -52,7 +124,6 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                     </div>
                     <div>
                       <p className="truncate text-lg font-bold text-gray-900">
-                        {/* Fix: use username instead of name */}
                         {employee.username}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-y-1 gap-x-4 text-sm text-gray-500">
@@ -96,7 +167,7 @@ const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             لا يوجد موظفون مضافون
           </h3>
           <p className="mt-2 text-gray-500">
-            ابدأ بإضافة موظفين لإسناد المهام إليهم.
+            ابدأ بإضافة موظفين أو استيراد قائمة جاهزة لإسناد المهام إليهم.
           </p>
         </div>
       )}

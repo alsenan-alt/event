@@ -226,6 +226,29 @@ const App: React.FC = () => {
     setEmployeeToEdit(null);
   };
 
+  const handleImportEmployees = (importedEmployees: User[]) => {
+    // Basic validation and merging logic
+    const currentEmails = new Set(admins.map(a => a.email.toLowerCase()));
+    const newAdmins: Admin[] = [];
+
+    importedEmployees.forEach(emp => {
+      // Ensure it's a valid admin object
+      if (emp.username && emp.email && !currentEmails.has(emp.email.toLowerCase())) {
+        newAdmins.push({
+          ...emp,
+          id: emp.id || `admin-imp-${Date.now()}-${Math.random()}`
+        } as Admin);
+      }
+    });
+
+    if (newAdmins.length > 0) {
+      setAdmins([...admins, ...newAdmins]);
+      alert(`تم استيراد ${newAdmins.length} موظف بنجاح.`);
+    } else {
+      alert('لم يتم استيراد أي موظفين جدد (قد يكونون موجودين مسبقاً).');
+    }
+  };
+
   const handleOpenDeleteEmployeeModal = (employee: User) => {
     if (currentUser?.id === employee.id) {
       alert('لا يمكنك حذف حسابك الخاص من هنا.');
@@ -475,6 +498,7 @@ const App: React.FC = () => {
             setIsEmployeeModalOpen(true);
           }}
           onDelete={handleOpenDeleteEmployeeModal}
+          onImport={handleImportEmployees}
         />
       );
     }
