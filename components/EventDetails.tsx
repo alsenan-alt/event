@@ -1,3 +1,4 @@
+
 import React from 'react';
 // Fix: Replace non-existent 'Employee' type with 'User'.
 import { Event, Task, TaskStatus, User } from '../types';
@@ -6,7 +7,7 @@ import {
   PlusIcon,
   ArrowRightIcon,
   CalendarIcon,
-  CurrencyDollarIcon,
+  ArrowDownTrayIcon,
 } from './icons';
 import EventCountdown from './EventCountdown';
 
@@ -36,6 +37,19 @@ const EventDetails: React.FC<EventDetailsProps> = ({
     }
   };
 
+  const handleExportEvent = () => {
+    const eventData = JSON.stringify(event, null, 2);
+    const blob = new Blob([eventData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `event-${event.name.replace(/\s+/g, '_')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const completedTasks = event.tasks.filter(
     (t) => t.status === TaskStatus.Done,
   ).length;
@@ -58,13 +72,24 @@ const EventDetails: React.FC<EventDetailsProps> = ({
 
   return (
     <div className="animate-fade-in">
-      <button
-        onClick={onBack}
-        className="mb-6 flex items-center text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
-      >
-        <ArrowRightIcon className="me-2 h-5 w-5" />
-        العودة إلى كل الفعاليات
-      </button>
+      <div className="mb-6 flex items-center justify-between">
+        <button
+          onClick={onBack}
+          className="flex items-center text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+        >
+          <ArrowRightIcon className="me-2 h-5 w-5" />
+          العودة إلى كل الفعاليات
+        </button>
+        <button
+          onClick={handleExportEvent}
+          className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          title="تصدير بيانات الفعالية"
+        >
+          <ArrowDownTrayIcon className="me-2 h-4 w-4" />
+          تصدير الفعالية
+        </button>
+      </div>
+
       <div className="rounded-lg bg-white p-6 shadow-xl sm:p-8">
         <div className="mb-6 border-b pb-6">
           <div className="flex flex-wrap items-start justify-between gap-4">

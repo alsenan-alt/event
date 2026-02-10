@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import EventCard from './components/EventCard';
 import EventDetails from './components/EventDetails';
@@ -22,7 +23,7 @@ import {
   ClubPresident,
   User,
 } from './types';
-import { PlusIcon } from './components/icons';
+import { PlusIcon, ArrowUpTrayIcon } from './components/icons';
 
 // Helper function to get initial state from localStorage
 const getInitialState = <T,>(key: string, defaultValue: T): T => {
@@ -54,6 +55,8 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<
     (User & { role: 'admin' | 'clubPresident' }) | null
   >(() => getInitialState('currentUser', null));
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Use useEffect to persist state changes to localStorage
   useEffect(() => {
@@ -194,8 +197,6 @@ const App: React.FC = () => {
       );
     }
 
-    // Future consideration: un-assign tasks or sponsorships from the deleted user.
-
     setIsConfirmDeleteAccountModalOpen(false);
     handleLogout();
   };
@@ -237,7 +238,6 @@ const App: React.FC = () => {
   const handleDeleteEmployee = () => {
     if (!employeeToDelete) return;
     setAdmins(admins.filter((admin) => admin.id !== employeeToDelete.id));
-    // Future consideration: Also remove from tasks?
     setIsConfirmDeleteEmployeeModalOpen(false);
     setEmployeeToDelete(null);
   };
@@ -267,6 +267,42 @@ const App: React.FC = () => {
     setEvents([...events, newEvent]);
   };
 
+  const handleImportEventClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedEvent = JSON.parse(event.target?.result as string) as Event;
+        
+        // Basic validation
+        if (!importedEvent.name || !importedEvent.date || !Array.isArray(importedEvent.tasks)) {
+          throw new Error('ملف الفعالية غير صالح.');
+        }
+
+        // Check if event already exists (by name and date) or generate new ID if needed
+        const alreadyExists = events.some(ev => ev.id === importedEvent.id);
+        const finalEvent = alreadyExists 
+          ? { ...importedEvent, id: `imported-${Date.now()}`, name: `${importedEvent.name} (نسخة)` }
+          : importedEvent;
+
+        setEvents([...events, finalEvent]);
+        alert(`تم استيراد الفعالية "${finalEvent.name}" بنجاح!`);
+      } catch (err) {
+        console.error(err);
+        alert('حدث خطأ أثناء استيراد الفعالية. تأكد من أن الملف بصيغة JSON صحيحة.');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    e.target.value = '';
+  };
+
   const handleOpenConfirmDeleteEventModal = (event: Event) => {
     setEventToDeleteId(event.id);
     setIsConfirmDeleteEventModalOpen(true);
@@ -284,7 +320,6 @@ const App: React.FC = () => {
     setEventToDeleteId(null);
   };
 
-  // Fix: Change 'assignedTo' type from string[] to User[].
   const handleSaveTask = (
     name: string,
     assignedTo: User[],
@@ -471,7 +506,6 @@ const App: React.FC = () => {
               (currentUser?.role === 'admin' &&
                 r.assignedToEmployeeId === currentUser.id),
           )}
-          // Fix: Pass admins to allEmployees prop.
           allEmployees={admins}
           onAdd={() => setIsSponsorshipModalOpen(true)}
           onSelect={setSelectedSponsorship}
@@ -509,17 +543,33 @@ const App: React.FC = () => {
     // Default view: events
     return (
       <div>
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <h2 className="text-2xl font-semibold text-gray-800">
             الفعاليات القادمة
           </h2>
-          <button
-            onClick={() => setIsAddEventModalOpen(true)}
-            className="flex items-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700"
-          >
-            <PlusIcon className="me-2 h-5 w-5" />
-            فعالية جديدة
-          </button>
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".json"
+              className="hidden"
+            />
+            <button
+              onClick={handleImportEventClick}
+              className="flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+            >
+              <ArrowUpTrayIcon className="me-2 h-5 w-5" />
+              استيراد فعالية
+            </button>
+            <button
+              onClick={() => setIsAddEventModalOpen(true)}
+              className="flex items-center rounded-lg bg-blue-600 px-4 py-2 font-bold text-white shadow-lg transition-colors hover:bg-blue-700"
+            >
+              <PlusIcon className="me-2 h-5 w-5" />
+              فعالية جديدة
+            </button>
+          </div>
         </div>
         {events.length > 0 ? (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -544,7 +594,7 @@ const App: React.FC = () => {
               لا توجد فعاليات مجدولة
             </h3>
             <p className="mt-2 text-gray-500">
-              ابدأ بتنظيم فعاليتك الأولى الآن!
+              ابدأ بتنظيم فعاليتك الأولى الآن أو استورد فعالية مشتركة!
             </p>
           </div>
         )}
@@ -604,7 +654,6 @@ const App: React.FC = () => {
           }}
           onSave={handleSaveTask}
           taskToEdit={taskToEdit}
-          // Fix: Pass admins to allEmployees prop.
           allEmployees={admins}
         />
       )}
@@ -628,7 +677,7 @@ const App: React.FC = () => {
         }}
         onSave={handleSaveSponsorship}
         sponsorshipToEdit={sponsorshipToEdit}
-        allEmployees={admins} // Assign to admins
+        allEmployees={admins}
         currentUserRole={currentUser?.role || null}
         currentUserId={currentUser.id}
       />
